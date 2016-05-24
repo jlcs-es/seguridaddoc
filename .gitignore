@@ -1,0 +1,10 @@
+*.aux
+*.log
+*.gz
+*.toc
+memoria.pdf
+*.out
+*.fdb_latexmk
+*.fls
+*.~vsdx
+

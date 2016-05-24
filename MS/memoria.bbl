@@ -1,0 +1,21 @@
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{1}
+
+\bibitem{metasploit}
+Open~Source Community, \emph{Metasploit}, \url{https://www.metasploit.com/}.
+
+\bibitem{metasploitable}
+Rapid7, \emph{Metasploitable},
+  \url{https://information.rapid7.com/metasploitable-download.html}.
+
+\bibitem{rapid7-userscriptsamba}
+\bysame, \emph{Samba user script map},
+  \url{https://www.rapid7.com/db/modules/exploit/multi/samba/usermap_script}.
+
+\end{thebibliography}
