@@ -51,7 +51,7 @@
 
 \section{¿Qué es Buffer Overflow?}
 
-En lenguajes de bajo nivel (en este caso, C) donde las comprobaciones sobre los tamaños en arrays, strings o buffers las tienen que hacer los usuarios y no el propio lenguaje (como harían otros lenguajes como Javascript o Python), es posible que por un error humano se de una circustancia como la siguiente:
+En lenguajes de bajo nivel (en este caso, C) donde las comprobaciones sobre los tamaños en arrays, strings o buffers las tienen que hacer los usuarios y no el propio lenguaje (como harían Javascript o Python), es posible que por un error humano se dé una circunstancia como la siguiente:
 
 \begin{lstlisting}
 #include <string.h>
@@ -68,7 +68,7 @@ int main (int argc, char **argv)
 }
 \end{lstlisting}
 
-El programador olvida comprobar cuál es el tamaño de \textit{bar} antes de copiarlo a \textit{c}. Pero, ¿y qué si el texto introducido es más largo?.
+El programador olvida comprobar cuál es el tamaño de \textit{bar} antes de copiarlo a \textit{c}. Pero, ¿y si el texto introducido es más largo?.
 
 \begin{center}
 \includegraphics[width=0.5\linewidth]{so}
@@ -78,27 +78,35 @@ Si el texto supera los 12 bytes, alcanzará eventualmente las porciones de la pi
 
 Por suerte, existen mecanismos de protección (automáticos, en tiempo de compilación, o incluso en el sistema operativo) que alteran los elementos en la pila (o añaden nuevos) para evitar ataques corrompiendo la información.
 
-\subsection{Deshaciendo las medidas de protección}
+\subsection{Desactivando las medidas de protección}
 
 Existen varios mecanismos para evitar los posibles ataques:
 
 \begin{itemize}
-	\item El kernel del sistema operativo puede dar direcciones aleatorias los espacios del programa, técnica conocida como ASLR\cite{ASLR}.
-	\item El compilador de C GCC tiene un mecanismo de canario, una forma de detectar si se ha reescrito el valor de retorno en la pila\cite{bocanary}
+	\item El kernel del sistema operativo puede dar direcciones aleatorias a los espacios del programa, técnica conocida como ASLR \cite{ASLR}.
+	\item El compilador de C, GCC, tiene un mecanismo de canario, una forma de detectar si se ha reescrito el valor de retorno en la pila \cite{bocanary}
 	\item Además, GCC reordena las variables locales, poniendo en último lugar (técnicamente hablando, direcciones de memoria más grandes) los punteros que puedan ser vulnerables, haciendo más difícil que se reescriban ciertas variables que no sean punteros y que, el programador, no espere que sean editadas por culpa de un error.
 \end{itemize}
 
-Para desactivar el primero (ASLR, que es una opción del kernel), uno tiene que ordenar:
+Para desactivar el primero (ASLR, que es una opción del kernel), uno tiene que ejecutar:
 
 \begin{verbatim}
 sudo sysctl -w kernel.randomize_va_space=0
 \end{verbatim}
+
 
 Y para desactivar la protección de la pila en el compilador GCC hay que usar la siguiente opción en el compilador:
 
 \begin{verbatim}
 -fno-stack-protector
 \end{verbatim}
+
+Y para permitir ejecución de código en la pila:
+
+\begin{verbatim}
+-z execstack
+\end{verbatim}
+
 
 
 \newpage
@@ -187,8 +195,8 @@ La siguiente prueba efectivamente da el valor esperado:
 \section{Ejercicio 2 - Ejecutando un shell mediante Buffer Overflow}
 
 En este ejercicio vamos a dejar una aplicación vulnerable a buffer overflow correr con eid=0 y vamos a compilar una aplicación que inserte un shell
-en el buffer overflow para ejecutar un shell como eid=0. Un ataque real (si no fuese ya por las medidas de protección contra buffer overflow) un atacante
-que ya ha ganado ejecución arbitraria usaría este ataque para escalar privilegios, y continuar con el ataque desde root.
+en el buffer overflow para ejecutar un shell como eid=0. En un ataque real (si no fuese ya por las medidas de protección contra buffer overflow) un atacante
+que ya ha ganado ejecución arbitraria usaría este ataque para escalar privilegios, y continuar con el ataque como root.
 
 
 
@@ -283,11 +291,11 @@ $ gcc bo2xploit.c -z execstack -fno-stack-protector -o bo2xploit -g
 
 \noindent Nota: la opción -g de depuración la hemos activado para poder depurar con gdb. No es necesaria, pero si no se usa habrá que cambiar la dirección a la que saltar (porque cambiará de posición el buffer).
 
-En la aplicación vulnerable, podemos ver que hemos introducido un buffer de 24 bytes y que es justo el tamaño del ensamblador escrito en la primera parte. También \textbf{hemos metido 16 bytes de hueco porque sino los \textit{pushes} del ensamblador para hacer la llamada al sistema autodestruyen las propias instrucciones}.  Además hemos introducido también un printf mostrando la posición de buffer para saber a donde hay que saltar.
+En la aplicación vulnerable, podemos ver que hemos introducido un buffer de 24 bytes y que es justo el tamaño del ensamblador escrito en la primera parte. También \textbf{hemos metido 16 bytes de hueco porque si no los \textit{pushes} del ensamblador para hacer la llamada al sistema autodestruyen las propias instrucciones del programa}.  Además hemos introducido también un printf mostrando la posición de buffer para saber a donde hay que saltar.
 
 
 \begin{minipage}{\linewidth}
-Para imprimir el badfile, generamos este programa:
+Para generar el \textit{badfile}, ejecutamos este programa:
 
 \begin{lstlisting}
 /*A program that creates a file containing code for launching shell*/
