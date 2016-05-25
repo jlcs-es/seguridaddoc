@@ -429,7 +429,7 @@ Vemos que usa en el campo usuario el siguiente texto:
 
 \hfill
 
-%TODO: Latex no imprime bien las comillas 
+%TODO: Latex no imprime bien las comillas
 %No hay manera cómoda de apañarlo estando dentro del lstlisting
 
 Ese usuario introduciría una orden como el usuario que controla Samba para conectar una terminal sh a un servidor de telnet alojado en la máquina atacante puerto 4444. Como samba está controlado por root, la terminal que se ejecuta tiene id=0, permitiendo el nivel máximo de administración. Este fallo estaría clasificado como Injection (aunque no SQL).
@@ -510,18 +510,33 @@ Algo va mal, no se ha creado ninguna sesión, debido a que las conexiones salien
 
 %TODO: poner la configuración de SNORT de /etc/snort/snort.conf y explicar señalar qué dirección es del anfitrión, que sería de la red externa, y qué dirección es de la mv, que sería la subred home
 
-%TODO: poner la orden que se usa en el anfitrión e indicar de nuevo lo que es característico de nuestra topología simplificada (interfaz vboxnet0)
-
+%TODO: poner la orden que se usa en el anfitrión e indicar de nuevo lo que es característico de nuestra topología simplificada (interfaz vboxnet3)
 
 %ADD ? preprocessor sfportscan:
 
-%TODO: revisar esta sección
-En la sección anterior hemos visto trozos de trazas en Wireshark que nos pueden servir de firmas para detectar ataques. Podemos configurar Snort para que avise de ciertos patrones en intercambios de información a través de la red. También podría actuar en base a ciertas reglas, como bloqueando el tráfico, instalando nuevas iptables, reiniciando la máquina, etc..., aunque se recomienda no hacerlo porque podrían atacantes mandar tráfico para activar esas órdenes.
+En la sección anterior hemos visto trozos de trazas en Wireshark que nos pueden servir de firmas para detectar ataques. Sin embargo, podemos configurar Snort para que avise de ciertos patrones en intercambios de información a través de la red, al igual que vemos nosotros manualmente con Wireshark. Snort irá añadiendo alertas a un fichero dedicado cuando detecte ciertos patrones en la red, que iremos viendo con grep.
 
-%Texto alternativo:
+% Con Snort podemos buscar \textit{firmas} representativas en los mensajes de ciertos ataques, para poder detectarlos, e incluso aplicar acciones (instalar nuevas iptables, guardar logs y reiniciar servicios, etc.), aunque no se recomienda para evitar que se conviertan en nuevos modo de ataque (como una denegación de servicio donde el servidor web se aísla ante la detección de un ataque, y deja sin servicio a los usuarios). En las trazas de Wireshark analizadas hemos destacado ciertas cadenas que aparecen por ser parte del propio ataque, lo que nos pueden servir de \textit{firmas} en Snort.
 
-Con Snort podemos buscar \textit{firmas} representativas en los mensajes de ciertos ataques, para poder detectarlos, e incluso aplicar acciones (instalar nuevas iptables, guardar logs y reiniciar servicios, etc.), aunque no se recomienda para evitar que se conviertan en nuevos modo de ataque (como una denegación de servicio donde el servidor web se aísla ante la detección de un ataque, y deja sin servicio a los usuarios). En las trazas de Wireshark analizadas hemos destacado ciertas cadenas que aparecen por ser parte del propio ataque, lo que nos pueden servir de \textit{firmas} en Snort.
+A partir de ahora, para cada prueba individual, limpiamos los logs de snort y lo reiniciamos usando la siguiente secuencia:
 
+\begin{verbatim}
+/var/log/snort# rm alert snort.log ;\
+rm -rf 192.168.59.1 192.168.59.100 ;\ 
+service snort stop ;\ 
+snort -D -i vboxnet3 -u snort -g snort \
+-l /var/log/snort -A full \
+-K ascii -c /etc/snort/snort.conf 
+rm: no se puede borrar 'alert': No existe el archivo o el directorio
+rm: no se puede borrar 'snort.log': No existe el archivo o el directorio
+Spawning daemon child...
+My daemon child 4102 lives...
+Daemon parent exiting (0)
+/var/log/snort# cat alert 
+/var/log/snort#
+\end{verbatim}
+
+Lo primero que hemos hecho para iniciar el ataque es un análisis de la red con nmap. 
  
 
 %TODO: Snort para detectar nmap
