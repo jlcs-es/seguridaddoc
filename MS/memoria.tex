@@ -503,6 +503,8 @@ Podríamos bloquear con iptables los servicios Samba y Tomcat, pero eso equivale
 
 Algo va mal, no se ha creado ninguna sesión, debido a que las conexiones salientes nuevas no se admiten. Repetimos que esto solo previene parte del ataque, pero el atacante debe entonces \textit{adivinar} qué bloqueo existe y cómo saltarlo.
 
+Además de las iptables para evitar la conexión del revés de las sesiones metasploit, podríamos también bloquear el icmp echo para evitar las pruebas de nmap. Sin embargo, nmap tiene opciones relativamente sencillas para usar otras pruebas en vez de usar solamente ping, así que no le hemos visto interés alguno en bloquearlo.
+
 \subsection{Predicción de ataques - Snort}
 
 %TODO: ¿Qué es snort?   nah'
@@ -536,28 +538,86 @@ Daemon parent exiting (0)
 /var/log/snort#
 \end{verbatim}
 
-Lo primero que hemos hecho para iniciar el ataque es un análisis de la red con nmap. 
- 
+En nuestra configuración de snort hemos definido \$EXTERNAL\_NET y \$HOME\_NET como \textit{any}, pero en un escenario real uno definiría correctamente los segmentos de red locales en los que está el servidor, y los externos como los demás.
 
-%TODO: Snort para detectar nmap
+Lo primero que hemos hecho para iniciar el ataque es un análisis de la red con nmap, así que vamos a empezar también detectando el escaneo de nmap. La forma más sencilla que hemos visto para poder hacerlo es buscar la cadena ascii NMAP y cualquiera de sus variantes mayúsculas y minúsculas. En snort, uno puede escribir una regla en /etc/snort/rules con el siguiente contenido:
 
-%TODO: Snort para detectar Meterpreter
+\begin{verbatim}
+alert tcp $EXTERNAL_NET any -> $HOME_NET any \
+(\
+msg:"NMAP SCAN en los servidores"; \
+content:"nmap"; \
+nocase; \
+threshold: type both, count 5, seconds 60, track by_src; \
+reference:url,https://nmap.org/; \
+sid: 696969696 \
+) 
+\end{verbatim}
 
-%TODO: Snort para detectar /= en el Auth de Samba
+De la configuración de esta regla cabe destacar la regla \textbf{nocase;} que indica que el contenido podrá ir en cualquier combinación de mayúsculas y minúsculas.
 
-Si repetimos las pruebas (desactivando iptables) snort reacciona de la siguiente manera:
+\vspace{10pt}
 
-%TODO: repetir pruebas SIN iptables pero con snort
+Si reiniciamos snort con esa regla, y realizamos un \textit{nmap -A} al servidor, usando grep en el fichero log de alertas vemos lo siguiente:
 
+\begin{verbatim}
+	/var/log/snort# grep -i nmap alert
+	[**] [1:696969696:0] NMAP SCAN en los servidores [**]
+	[Xref => http://https://nmap.org/]
+\end{verbatim}
 
+\noindent Podemos ver como snort alerta de un posible escaneo nmap.
+
+\vspace{10pt}
+
+Continuando con el análisis de la red para detectar intrusiones, ahora tocaría Tomcat que es el primer ataque que hemos realizado. La regla que vamos a usar no es concretamente para detectar si alguien está usando el \textit{manager deploy} de Tomcat que entendemos que es una herramienta que podría ser útil, sino para detectar el uso de Meterpreter como \textit{payload} en la red.
+
+Cuando se manda el \textit{payload} de Meterpreter en Java, no se ofuscan los nombres de las clases y viajan algunas clases con el \textit{package} org/.../meterpreter/... Aprovechando esto, escribimos la siguiente regla:
+
+\begin{verbatim}
+alert tcp $EXTERNAL_NET any -> $HOME_NET any \
+(\
+msg:"Meterpreter session detected"; \
+content:"meterpreter"; \
+nocase; \
+reference:url,https://rapid7.com/; \
+sid: 696939696 \
+)
+\end{verbatim}
+
+Si después de instalar esta regla y reiniciar snort realizamos el ataque de Tomcat usando lo indicado en el apartado de Metasploitable, podemos observar lo siguiente:
+
+\begin{verbatim}
+/var/log/snort# grep -i meter alert 
+[**] [1:696939696:0] Meterpreter session detected [**]
+\end{verbatim}
+
+Por último, vamos también a detectar el ataque de Username Map Script en Samba. Como samba viaja al puerto 139, utilizamos la siguiente regla a ese puerto para detectar el ataque:
+
+\begin{lstlisting}[breaklines]
+alert tcp $EXTERNAL_NET any -> $HOME_NET 139 \
+(\
+msg:"Usermap script vulnerability"; \
+content:"=/"; \
+content:"null"; \
+reference:url,https://www.rapid7.com/db/modules/exploit/multi/samba/usermap_script;\
+sid: 696919696 \
+)
+\end{lstlisting}
+
+\noindent Podemos ver que en la regla lo que buscamos es null (que es parte de /dev/null) y también el trozo inicial \textbf{=/} que aparecía en la traza de Samba. Con esas dos búsquedas se puede ver que efectivamente al hacer el ataque aparece la alerta:
+
+\begin{lstlisting}[breaklines]
+/var/log/snort# grep script alert
+[**] [1:696919696:0] Usermap script vulnerability [**]
+[Xref => http://https://www.rapid7.com/db/modules/exploit/multi/samba/usermap_script]
+\end{lstlisting}
 
 \section{Conclusiones}
 
 A falta personal de más tiempo para analizar más tipos de ataques, en más profundidad, formas más refinadas de detectar y proteger la organización, creemos que al menos hemos conseguido el objetivo básico de la práctica: entender sobre un entorno suficientemente realista (LEGO) la importancia de medidas como el FW e IDS, por cómo se realizan en profundidad los ataques en red.
 
 Si bien durante el desarrollo nos hemos limitado a una máquina anfitrión con la máquina virtual de Metasploitable, y hemos visto que es equivalente a LEGO, la importancia aquí es que durante la explicación lo hemos tenido que entender primero bien sobre LEGO, y después hemos podido simplificar la arquitectura para agilizar el desarrollo. Con esto queremos decir que aunque en la entrega final no se vea una arquitectura LEGO, ha sido fundamental para entenderlo todo, y gracias a haber trabajado en STA tanto con él, nos ahorramos un precioso tiempo que nos hacía falta.
-
-
 
 \bibliographystyle{amsplain}
 \bibliography{memoria}
